@@ -32,6 +32,11 @@ env:
   TF_WORKING_DIR: task2/gitea-aws
   TF_IN_AUTOMATION: "true"
 
+  # Provide required TF variables for CI
+  TF_VAR_project_name: sap-gitea
+  TF_VAR_env: dev
+  TF_VAR_aws_region: eu-central-1
+
 jobs:
   plan:
     name: fmt / validate / plan
