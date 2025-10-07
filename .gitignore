@@ -1,0 +1,103 @@
+# =========================
+# Terraform
+# =========================
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+
+# Plans / artifacts
+tfplan
+tfplan.*
+*.tfplan
+*.plan
+
+# Local overrides (never commit)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local vars (keep secrets local)
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Terragrunt (if ever used)
+.terragrunt-cache/
+**/.terragrunt-cache/
+terragrunt-debug.tfvars.json
+
+# TFLint / tooling (keep config .tflint.hcl, ignore noise)
+.tflint.*.log
+
+# =========================
+# Secrets / credentials
+# =========================
+*.pem
+*.key
+*.p12
+*.crt
+*.csr
+.env
+.env.*
+.envrc
+*.secrets
+secrets.*.json
+
+# =========================
+# Logs / dumps
+# =========================
+*.log
+logs/
+*.out
+*.err
+
+# =========================
+# OS junk
+# =========================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.Spotlight-V100
+.Trashes
+
+# =========================
+# Editors / IDEs
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+
+# =========================
+# Build / temp / archives
+# =========================
+dist/
+build/
+tmp/
+temp/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# =========================
+# Node / Python (in case you add scripts later)
+# =========================
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+.yarn/*
+.venv/
+__pycache__/
+*.pyc

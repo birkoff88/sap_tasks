@@ -1,0 +1,121 @@
+# .github/workflows/terraform-task2.yml
+name: terraform-task2
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'task2/gitea-aws/**'
+      - '.github/workflows/terraform-task2.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'task2/gitea-aws/**'
+      - '.github/workflows/terraform-task2.yml'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Run terraform apply (requires AWS OIDC role + remote backend recommended)'
+        type: boolean
+        default: false
+      tf_vars:
+        description: 'Optional TF_VAR_* (space-separated: key=val key2=val2)'
+        type: string
+        required: false
+
+permissions:
+  id-token: write   # for AWS OIDC
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  TF_WORKING_DIR: task2/gitea-aws
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  plan:
+    name: fmt / validate / plan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -diff
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          if-no-files-found: error
+
+  apply:
+    name: manual apply
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply == true }}
+    runs-on: ubuntu-latest
+    needs: plan
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Export TF_VAR_* (optional)
+        if: ${{ inputs.tf_vars != '' }}
+        run: |
+          for kv in ${{ inputs.tf_vars }}; do
+            k="${kv%%=*}"; v="${kv#*=}"
+            echo "TF_VAR_${k}=${v}" >> $GITHUB_ENV
+          done
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
