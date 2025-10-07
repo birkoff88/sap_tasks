@@ -514,19 +514,19 @@ resource "aws_launch_template" "app" {
 
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
- user_data = base64encode(templatefile("${path.module}/user-data.sh", {
-  efs_id        = aws_efs_file_system.gitea.id
-  efs_dns       = aws_efs_file_system.gitea.dns_name
-  mount_dir     = var.app_mount_dir
-  app_port      = var.app_port
-  db_secret_arn = aws_secretsmanager_secret.db.arn
-  db_host       = aws_db_instance.postgres.address
-  db_port       = var.db_port
-  db_name       = var.db_name
-  aws_region    = var.aws_region
-  alb_dns       = aws_lb.app.dns_name
-  GITEA_VERSION = var.gitea_version
-}))
+  user_data = base64encode(templatefile("${path.module}/user-data.sh", {
+    efs_id        = aws_efs_file_system.gitea.id
+    efs_dns       = aws_efs_file_system.gitea.dns_name
+    mount_dir     = var.app_mount_dir
+    app_port      = var.app_port
+    db_secret_arn = aws_secretsmanager_secret.db.arn
+    db_host       = aws_db_instance.postgres.address
+    db_port       = var.db_port
+    db_name       = var.db_name
+    aws_region    = var.aws_region
+    alb_dns       = aws_lb.app.dns_name
+    GITEA_VERSION = var.gitea_version
+  }))
 
 
   metadata_options {
@@ -586,18 +586,3 @@ resource "aws_autoscaling_group" "app" {
   ]
 }
 
-# ------------------------------------------------------------------------------
-# Outputs
-# ------------------------------------------------------------------------------
-output "alb_dns_name" {
-  value       = aws_lb.app.dns_name
-  description = "Open http://<this>"
-}
-
-output "rds_endpoint" {
-  value = aws_db_instance.postgres.address
-}
-
-output "db_secret_arn" {
-  value = aws_secretsmanager_secret.db.arn
-}
