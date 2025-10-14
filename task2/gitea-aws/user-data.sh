@@ -81,7 +81,7 @@ DB_TYPE  = postgres
 HOST     = ${db_host}:${db_port}
 NAME     = ${db_name}
 USER     = $${db_user}
-PASSWD   = $${db_pass}
+PASSWD   = "$${db_pass}"
 SCHEMA   = public
 SSL_MODE = require
 
