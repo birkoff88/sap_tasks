@@ -265,8 +265,13 @@ resource "aws_kms_key" "secret" {
 }
 
 resource "random_password" "db" {
-  length  = 32
-  special = true
+  length           = 32
+  special          = true
+  override_special = "!#$%^&*()-_=+[]{}<>?:.,|~`"  # no / @ " or space
+  min_lower        = 1
+  min_upper        = 1
+  min_numeric      = 1
+  min_special      = 1
 }
 
 resource "aws_secretsmanager_secret" "db" {
