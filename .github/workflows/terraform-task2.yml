@@ -3,19 +3,21 @@ name: terraform-task2
 
 on:
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
     paths:
       - 'task2/gitea-aws/**'
       - '.github/workflows/terraform-task2.yml'
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
       - 'task2/gitea-aws/**'
       - '.github/workflows/terraform-task2.yml'
   workflow_dispatch:
     inputs:
       apply:
-        description: 'Run terraform apply (requires AWS OIDC role + remote backend recommended)'
+        description: 'Run terraform apply (Terraform Cloud backend)'
         type: boolean
         default: false
       tf_vars:
@@ -24,15 +26,15 @@ on:
         required: false
 
 permissions:
-  id-token: write   # for AWS OIDC
+  id-token: write
   contents: read
 
 env:
   AWS_REGION: eu-central-1
   TF_WORKING_DIR: task2/gitea-aws
   TF_IN_AUTOMATION: "true"
+  TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
 
-  # Provide required TF variables for CI
   TF_VAR_project_name: sap-gitea
   TF_VAR_env: dev
   TF_VAR_aws_region: eu-central-1
@@ -41,23 +43,17 @@ jobs:
   plan:
     name: fmt / validate / plan
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Whoami (STS)
-        run: aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -74,32 +70,22 @@ jobs:
       - name: Terraform validate
         run: terraform validate
 
-      - name: Terraform plan
-        run: terraform plan -input=false -out=tfplan
-
-      - name: Upload plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.TF_WORKING_DIR }}/tfplan
-          if-no-files-found: error
+      - name: Terraform plan (remote)
+        run: terraform plan -input=false -no-color
 
   apply:
     name: manual apply
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply == true }}
     runs-on: ubuntu-latest
     needs: plan
-
     defaults:
       run:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -108,15 +94,10 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.5
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
       - name: Terraform init
         run: terraform init -input=false
-
-      - name: Download plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.TF_WORKING_DIR }}
 
       - name: Export TF_VAR_* (optional)
         if: ${{ inputs.tf_vars != '' }}
@@ -126,5 +107,5 @@ jobs:
             echo "TF_VAR_${k}=${v}" >> $GITHUB_ENV
           done
 
-      - name: Terraform apply
-        run: terraform apply -input=false -auto-approve tfplan
+      - name: Terraform apply (remote)
+        run: terraform apply -input=false -auto-approve -no-color
